@@ -59,6 +59,7 @@ class CompetitiveBot(BotAI):
                 return False
             return True
         return True
+        
     async def Depots(self, Limit: int) -> bool:
         Total: int = self.structures.of_type({UnitTypeId.SUPPLYDEPOT, UnitTypeId.SUPPLYDEPOTLOWERED}).amount
         if Total < Limit and self.can_afford(UnitTypeId.SUPPLYDEPOT):
@@ -70,9 +71,24 @@ class CompetitiveBot(BotAI):
                     return True
                 else:
                     return False
-                #Worker: Unit = self.workers.filter(lambda x: not x.is_returning).closest_to(Position)
             else:
+                # Must work on this!
                 return True
+        return True
+    
+    async def Barracks(self, Limit: int) -> bool:
+        Total: int = self.structures.of_type(UnitTypeId.BARRACKS).amount
+        if Total < Limit and self.can_afford(UnitTypeId.BARRACKS):
+            if Limit == 1:
+                Placement = self.main_base_ramp.barracks_correct_placement
+                SCV: Unit = self.workers.filter(lambda Worker: not Worker.is_returning).closest_to(Placement)
+                if SCV:
+                    SCV.build(UnitTypeId.BARRACKS, Placement)
+                    return True
+                else:
+                    return False
+            elif Limit > 1:
+                return True #Add special handling here
         return True
 
     # Methods:
@@ -109,7 +125,10 @@ class CompetitiveBot(BotAI):
                     Sequence = Foundation([
                         self.SCVs(13),
                         self.Depots(1),
-                        self.SCVs(14)
+                        self.SCVs(14),
+                        self.Barracks(1),
+                        self.SCVs(15),
+                        self.SCVs(16),
                     ])
                     await Sequence.Execute()
             elif self.Compare(self.Tactic, '1-1-1'):
