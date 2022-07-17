@@ -72,7 +72,7 @@ class CompetitiveBot(BotAI):
                 else:
                     return False
             else:
-                # Must work on this!
+                # Add Special handling here
                 return True
         return True
     
@@ -88,8 +88,13 @@ class CompetitiveBot(BotAI):
                 else:
                     return False
             elif Limit > 1:
-                return True #Add special handling here
+                return True # Add special handling here
         return True
+        
+    async def Refineries(self, Limit: int) -> bool:
+        Total: int = self.structures.of_type(UnitTypeId.REFINERY)
+        if Total < Limit:
+            
 
     # Methods:
     async def on_start(self):
