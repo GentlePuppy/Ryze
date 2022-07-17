@@ -1,8 +1,8 @@
-# Written by: Christopher Gholmieh
 # For: Ryze
 
 # Packages:
 import random
+from timeit import repeat
 import sc2
 
 # Modules:
@@ -92,10 +92,25 @@ class CompetitiveBot(BotAI):
         return True
         
     async def Refineries(self, Limit: int) -> bool:
-        Total: int = self.structures.of_type(UnitTypeId.REFINERY)
-        if Total < Limit:
-            
-
+        Barracks: bool = self.structures.of_type(UnitTypeId.BARRACKS).empty
+        Total: int = self.structures.of_type(UnitTypeId.REFINERY).amount
+        if Total < Limit and self.can_afford(UnitTypeId.REFINERY) and Barracks is False:
+            if Total <= 2:
+                CommandCenter = self.townhalls[(self.townhalls.amount - 1)]
+                Geysers: Units = self.vespene_geyser.closer_than(20, CommandCenter)
+                for Geyser in Geysers:
+                    if self.gas_buildings.filter(lambda unit: unit.distance_to(Geyser) < 1):
+                        break
+                    SCV: Unit = self.workers.filter(lambda Worker: not Worker.is_returning).closest_to(Geyser)
+                    if SCV:
+                        SCV.build(UnitTypeId.REFINERY, Geyser)
+                        return True
+                    else:
+                        return False
+            elif Total > 2:
+                #special handling here
+                return True
+                   
     # Methods:
     async def on_start(self):
         # Variables:
@@ -134,8 +149,19 @@ class CompetitiveBot(BotAI):
                         self.Barracks(1),
                         self.SCVs(15),
                         self.SCVs(16),
+                        self.Refineries(1),
+                        self.SCVs(17),
+                        self.SCVs(18),
+                        self.SCVs(19)
                     ])
                     await Sequence.Execute()
             elif self.Compare(self.Tactic, '1-1-1'):
                 if self.Compare(self.Override, False):
                     print(f"Iteration: {iteration}")
+
+    async def on_building_construction_complete(self, Building: Unit):
+        if self.Compare(Building.name, 'Refinery'):
+            for Index in range(2):
+                SCV: Unit = self.workers.filter(lambda Worker: not Worker.is_carrying_vespene and Worker.distance_to(Building) < 10).random
+                if SCV:
+                    SCV.gather(Building)
