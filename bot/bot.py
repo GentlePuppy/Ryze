@@ -2,12 +2,14 @@
 
 # Packages:
 import random
+from select import select
 from timeit import repeat
 import sc2
 
 # Modules:
 
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.ability_id import AbilityId
 from sc2.units import Units
 from sc2.unit import Unit
 from sc2.bot_ai import BotAI
@@ -110,6 +112,25 @@ class CompetitiveBot(BotAI):
             elif Total > 2:
                 #special handling here
                 return True
+        return True
+    
+    async def CommandCenters(self, Limit: int) -> bool:
+        Total: int = self.townhalls.amount
+        if Total < Limit and self.can_afford(UnitTypeId.COMMANDCENTER):
+            Position = await self.get_next_expansion()
+            SCV: Unit = self.workers.filter(lambda Worker: not Worker.is_returning).closest_to(Position)
+            if SCV:
+                SCV.build(UnitTypeId.COMMANDCENTER, Position)
+                return True
+            else:
+                return False
+        return True
+
+    async def Orbital(self):
+        Progress: bool = self.structures.of_type(UnitTypeId.BARRACKS).ready.empty
+        if Progress is False:
+            if self.minerals >= 150 and self.townhalls(UnitTypeId.ORBITALCOMMAND).amount == 0:
+                self.townhalls.first(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
                    
     # Methods:
     async def on_start(self):
@@ -152,7 +173,8 @@ class CompetitiveBot(BotAI):
                         self.Refineries(1),
                         self.SCVs(17),
                         self.SCVs(18),
-                        self.SCVs(19)
+                        self.Orbital(),
+                        self.CommandCenters(2),
                     ])
                     await Sequence.Execute()
             elif self.Compare(self.Tactic, '1-1-1'):
@@ -165,3 +187,14 @@ class CompetitiveBot(BotAI):
                 SCV: Unit = self.workers.filter(lambda Worker: not Worker.is_carrying_vespene and Worker.distance_to(Building) < 10).random
                 if SCV:
                     SCV.gather(Building)
+        elif self.Compare(Building.name, 'CommandCenter'):
+            if self.Compare(self.enemy_race, Race.Terran):
+                if self.townhalls.amount < 5:
+                    Building(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
+                else:
+                    Building(AbilityId.UPGRADETOPLANETARYFORTRESS_PLANETARYFORTRESS)
+            else:
+                if self.townhalls < 3:
+                    Building(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
+                else:
+                    Building(AbilityId.UPGRADETOPLANETARYFORTRESS_PLANETARYFORTRESS)
